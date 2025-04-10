@@ -18,6 +18,11 @@
 
   <Import Project="BuildReleasePackages.targets" Condition="'$(UsingToolNuGetRepack)' == 'true'" />
 
+  <PropertyGroup>
+    <PrebuiltUsage Condition="'$(PrebuiltUsage)' == '' and '$(DotNetBuildSourceOnly)' == 'true' and '$(DotNetBuildRepo)' == 'true'">true</PrebuiltUsage>
+  </PropertyGroup>
+  <Import Project="PrebuiltUsage.targets" Condition="'$(PrebuiltUsage)' == 'true'" />
+
   <!-- Repository extension point -->
   <Import Project="$(RepositoryEngineeringDir)AfterSolutionBuild.targets" Condition="Exists('$(RepositoryEngineeringDir)AfterSolutionBuild.targets')"/>
 
