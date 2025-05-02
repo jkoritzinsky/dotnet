@@ -694,8 +694,7 @@
           Condition="'@(_InnerPackageCacheFiles)' != ''" />
   </Target>
 
-  <Target Name="MoveDotNetBuildLogs"
-        Condition="'$(IsUtilityProject)' != 'true'">
+  <Target Name="MoveDotNetBuildLogs" Condition="'$(IsUtilityProject)' != 'true'">
     <ItemGroup>
       <LogFilesToMove Include="$(RepoArtifactsDir)log\$(Configuration)\**\*" />
     </ItemGroup>

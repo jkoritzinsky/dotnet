@@ -276,12 +276,6 @@
              Targets="@(_SolutionBuildTargets)"
              Condition="'@(_SolutionBuildTargets)' != ''" />
 
-    <!-- Perform post-source-build tasks. Validate source-build requirements, such as the prebuilt
-         usage baseline. Only run this when we are actually building/packing something (vs. just restoring). -->
-    <MSBuild Projects="AfterSourceBuild.proj"
-             Properties="@(_CommonProps);_NETCORE_ENGINEERING_TELEMETRY=AfterSourceBuild"
-             Condition="'@(_SolutionBuildTargets)' != '' and '$(DotNetBuildSourceOnly)' == 'true' and '$(DotNetBuildRepo)' == 'true'" />
-
     <ItemGroup>
       <_PublishProps Include="@(_CommonProps)"/>
       <!-- Used in a few places in the stack to decide if publishing was enabled or not. -->
