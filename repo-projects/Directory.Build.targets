@@ -2,36 +2,7 @@
 
   <Import Project="$([MSBuild]::GetPathOfFileAbove(Directory.Build.targets, $(MSBuildThisFileDirectory)..))" />
 
-  <PropertyGroup Condition="'$(UseInnerClone)' == 'true'">
-    <!-- Update the ProjectDirectory property to point to the inner clone folder. Save the original path as a property
-         so that the RepoClean target deletes the outer artifacts folder. -->
-    <OriginalProjectDirectory>$(ProjectDirectory)</OriginalProjectDirectory>
-    <ProjectDirectory>$([MSBuild]::NormalizeDirectory('$(ProjectDirectory)', 'artifacts', 'inner-clone'))</ProjectDirectory>
-
-    <_DirSeparatorEscapedCharForExecArg Condition="'$(BuildOS)' == 'windows'">\</_DirSeparatorEscapedCharForExecArg>
-    <_DirSeparatorEscapedCharForExecArg Condition="'$(BuildOS)' != 'windows'" />
-
-    <!-- Use a fresh clone of the repo so that source-build modifications are isolated. -->
-    <CommonArgs>$(CommonArgs) /p:RepoRoot="$(ProjectDirectory)$(_DirSeparatorEscapedCharForExecArg)"</CommonArgs>
-    <!-- Override the artifacts dir to cleanly separate the inner build from outer build. -->
-    <CommonArgs>$(CommonArgs) /p:ArtifactsDir="$([MSBuild]::NormalizeDirectory('$(ProjectDirectory)', 'artifacts'))$(_DirSeparatorEscapedCharForExecArg)"</CommonArgs>
-  </PropertyGroup>
-
   <PropertyGroup>
-    <GlobalJsonFile Condition="'$(GlobalJsonFile)' == '' and Exists('$(ProjectDirectory)global.json')">$(ProjectDirectory)global.json</GlobalJsonFile>
-
-    <NuGetConfigFile Condition="'$(NuGetConfigFile)' == '' and Exists('$(ProjectDirectory)NuGet.config')">$(ProjectDirectory)NuGet.config</NuGetConfigFile>
-    <NuGetConfigFile Condition="'$(NuGetConfigFile)' == '' and Exists('$(ProjectDirectory)NuGet.Config')">$(ProjectDirectory)NuGet.Config</NuGetConfigFile>
-    <OriginalNuGetConfigFile>$(NuGetConfigFile)</OriginalNuGetConfigFile>
-    <!-- Update nuget.config property to point to modified file that will be created/updated during build. -->
-    <NuGetConfigFile Condition="'$(OriginalNuGetConfigFile)' != ''">$(BaseIntermediateOutputPath)$([System.IO.Path]::GetFileName('$(OriginalNuGetConfigFile)'))</NuGetConfigFile>
-
-    <RepoArtifactsDir>$([MSBuild]::NormalizeDirectory('$(ProjectDirectory)', 'artifacts'))</RepoArtifactsDir>
-    <RepoArtifactsPackageCache>$([MSBuild]::NormalizeDirectory('$(RepoArtifactsDir)', '.packages'))</RepoArtifactsPackageCache>
-
-    <!-- By default, use the eng/common/build.cmd/sh script -->
-    <BuildScript Condition="'$(BuildScript)' == ''">$([MSBuild]::NormalizePath('$(ProjectDirectory)', 'eng', 'common', 'build$(ShellExtension)'))</BuildScript>
-
     <DiskUsageCommand Condition="'$(BuildOS)' == 'windows'">powershell -NoProfile "Get-PSDrive -PSProvider FileSystem -Name (Get-Item "$(RepoRoot.TrimEnd('\'))").PSDrive.Name"</DiskUsageCommand>
     <DiskUsageCommand Condition="'$(BuildOS)' != 'windows'">df -h $(RepoRoot)</DiskUsageCommand>
 
@@ -84,19 +55,6 @@
     <RepoConsoleLogFile>$(ArtifactsLogRepoDir)$(RepositoryName).log</RepoConsoleLogFile>
     <MinimalConsoleLogOutput Condition="'$(MinimalConsoleLogOutput)' == ''">$(BuildInParallel)</MinimalConsoleLogOutput>
   </PropertyGroup>
-
-  <Target Name="PrepareInnerRepoRoot" Condition="'$(UseInnerClone)' == 'true'">
-    <ItemGroup>
-      <InnerRepoFile
-        Include="$(OriginalProjectDirectory)**/*;
-                 $(OriginalProjectDirectory)**/.*"
-        Exclude="$(OriginalProjectDirectory)artifacts/**/*;
-                 $(OriginalProjectDirectory)artifacts/**/.*" />
-    </ItemGroup>
-
-    <Copy SourceFiles="@(InnerRepoFile)"
-          DestinationFolder="$(ProjectDirectory)%(RecursiveDir)" />
-  </Target>
 
   <UsingTask TaskName="Microsoft.DotNet.UnifiedBuild.Tasks.ReplaceTextInFile" AssemblyFile="$(MicrosoftDotNetUnifiedBuildTasksAssembly)" TaskFactory="TaskHostFactory" />
   <Target Name="AddNoWarns"
@@ -539,7 +497,6 @@
           Outputs="$(BaseIntermediateOutputPath)Build.complete"
           Condition="'$(BuildCommand)' != ''"
           DependsOnTargets="BuildRepoReferences;
-                            PrepareInnerRepoRoot;
                             AddNoWarns;
                             UpdateNuGetConfig;
                             UpdateGlobalJsonVersions;
@@ -795,11 +752,8 @@
     <!-- Cleanup the entire repo artifacts dir. Ignore failures as this is best effort.
          Don't use Removedir as ContinueOnError on it doesn't work when using warnaserror/TreatWarningsAsErrors. -->
     <PropertyGroup>
-      <RepoArtifactsDirToClean Condition="'$(UseInnerClone)' == 'true'">$(OriginalProjectDirectory)artifacts</RepoArtifactsDirToClean>
-      <RepoArtifactsDirToClean Condition="'$(UseInnerClone)' != 'true'">$(RepoArtifactsDir)</RepoArtifactsDirToClean>
-
-      <RepoCleanCommand Condition="'$(BuildOS)' == 'windows'">rmdir "$(RepoArtifactsDirToClean.TrimEnd('\'))" /s /q</RepoCleanCommand>
-      <RepoCleanCommand Condition="'$(BuildOS)' != 'windows'">rm -rf "$(RepoArtifactsDirToClean)"</RepoCleanCommand>
+      <RepoCleanCommand Condition="'$(BuildOS)' == 'windows'">rmdir "$(RepoArtifactsDir.TrimEnd('\'))" /s /q</RepoCleanCommand>
+      <RepoCleanCommand Condition="'$(BuildOS)' != 'windows'">rm -rf "$(RepoArtifactsDir)"</RepoCleanCommand>
     </PropertyGroup>
 
     <Exec Command="$(RepoCleanCommand)" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" />
